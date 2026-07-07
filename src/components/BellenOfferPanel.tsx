@@ -5,6 +5,7 @@ import { createOrder, fetchOrdersByLeadId, updateOrder } from '../lib/db';
 import { calcFinalPrice, formatEuro } from '../lib/pricing';
 import { productToOrderFields } from '../lib/productUtils';
 import { appUrl, copyToClipboard, formatOrderNumber } from '../lib/format';
+import { sendOfferEmail } from '../lib/emailApi';
 import type { Lead, Order } from '../lib/types';
 
 interface BellenOfferPanelProps {
@@ -22,6 +23,7 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -53,10 +55,33 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
     window.setTimeout(() => setCopied(false), 2000);
   };
 
+  const emailOffer = async (order: Order) => {
+    if (!lead.email) return null;
+    return sendOfferEmail({
+      to: lead.email,
+      naam: lead.naam,
+      productnaam: order.productnaam,
+      prijsFormatted: formatEuro(Number(order.prijs)),
+      offerUrl: appUrl(`/order/${order.offerte_token}`),
+    });
+  };
+
   const handleSendExisting = async (order: Order) => {
     setSaving(true);
     setError(null);
+    setSent(false);
     copyOfferLink(order);
+
+    if (lead.email) {
+      const emailRes = await emailOffer(order);
+      if (emailRes?.ok === false) {
+        setError(emailRes.error);
+        setSaving(false);
+        return;
+      }
+      if (emailRes?.ok) setSent(true);
+    }
+
     if (order.status === 'offerte_aangemaakt') {
       const { error: updateError } = await updateOrder(order.id, { status: 'offerte_verzonden' });
       if (updateError) {
@@ -73,6 +98,7 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
     if (!selected) return;
     setSaving(true);
     setError(null);
+    setSent(false);
 
     const fields = productToOrderFields(selected, kortingBedrag);
     const { data, error: createError } = await createOrder({ lead_id: lead.id, ...fields });
@@ -83,6 +109,17 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
     }
 
     copyOfferLink(data);
+
+    if (lead.email) {
+      const emailRes = await emailOffer(data);
+      if (emailRes?.ok === false) {
+        setError(emailRes.error);
+        setSaving(false);
+        await loadOrders();
+        return;
+      }
+      if (emailRes?.ok) setSent(true);
+    }
 
     const { error: updateError } = await updateOrder(data.id, { status: 'offerte_verzonden' });
     if (updateError) {
@@ -117,7 +154,7 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
               onClick={() => handleSendExisting(latestOrder)}
               disabled={saving}
             >
-              {saving ? 'Bezig…' : copied ? 'Link gekopieerd!' : 'Verstuur offerte'}
+              {saving ? 'Bezig…' : sent ? 'E-mail verstuurd ✓' : copied ? 'Link gekopieerd!' : 'Verstuur offerte'}
             </button>
             <Link to={`/admin/orders/${latestOrder.id}`} className="btn btn-secondary btn-compact">
               Bekijk
@@ -174,7 +211,7 @@ export function BellenOfferPanel({ lead }: BellenOfferPanelProps) {
             onClick={handleCreateAndSend}
             disabled={saving || !selected || finalPrice < 0}
           >
-            {saving ? 'Bezig…' : copied ? 'Link gekopieerd!' : 'Offerte aanmaken & versturen'}
+            {saving ? 'Bezig…' : sent ? 'E-mail verstuurd ✓' : copied ? 'Link gekopieerd!' : 'Offerte aanmaken & versturen'}
           </button>
         </>
       )}

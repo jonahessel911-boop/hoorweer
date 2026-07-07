@@ -9,6 +9,7 @@ import { formatDate, copyToClipboard, appUrl, formatOrderNumber } from '../../li
 import { getDeliveryLabel, getAdvanceDeliveryUpdates, getNextDeliveryStatus } from '../../lib/orderTimeline';
 import { downloadOfferPdf } from '../../lib/offerPdf';
 import { formatEuro } from '../../lib/pricing';
+import { sendOfferEmail, sendPaymentLinkEmail } from '../../lib/emailApi';
 import { PLACEHOLDER_PRODUCT_IMAGE } from '../../lib/productUtils';
 
 export function OrderDetail() {
@@ -25,16 +26,44 @@ export function OrderDetail() {
   };
 
   const handleSendOffer = async () => {
-    if (!order) return;
+    if (!order || !lead) return;
     setBusy(true);
+    const offerUrl = appUrl(`/order/${order.offerte_token}`);
+    if (lead.email) {
+      const emailRes = await sendOfferEmail({
+        to: lead.email,
+        naam: lead.naam,
+        productnaam: order.productnaam,
+        prijsFormatted: formatEuro(Number(order.prijs)),
+        offerUrl,
+      });
+      if (!emailRes.ok) {
+        setBusy(false);
+        return;
+      }
+    }
     await updateOrder(order.id, { status: 'offerte_verzonden' });
     await refetch();
     setBusy(false);
   };
 
   const handleSendPaymentLink = async () => {
-    if (!order) return;
+    if (!order || !lead) return;
     setBusy(true);
+    const paymentUrl = appUrl(`/order/${order.offerte_token}`);
+    if (lead.email) {
+      const emailRes = await sendPaymentLinkEmail({
+        to: lead.email,
+        naam: lead.naam,
+        productnaam: order.productnaam,
+        prijsFormatted: formatEuro(Number(order.prijs)),
+        paymentUrl,
+      });
+      if (!emailRes.ok) {
+        setBusy(false);
+        return;
+      }
+    }
     await updateOrder(order.id, { status: 'betaallink_verzonden' });
     await refetch();
     setBusy(false);

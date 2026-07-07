@@ -9,6 +9,7 @@ import { useLeadDetail } from '../../hooks/useLeadDetail';
 import { updateLead } from '../../lib/db';
 import { canSendTestLink } from '../../lib/leadStatus';
 import { formatDate, copyToClipboard, testUrlForLead, formatOrderNumber } from '../../lib/format';
+import { sendTestLinkEmail } from '../../lib/emailApi';
 import { downloadOfferPdf } from '../../lib/offerPdf';
 
 type Tab = 'hoortest' | 'orders';
@@ -35,6 +36,19 @@ export function LeadDetail() {
     copyToClipboard(testUrl);
     setCopiedTest(true);
     setTimeout(() => setCopiedTest(false), 2000);
+
+    if (lead.email) {
+      const emailRes = await sendTestLinkEmail({
+        to: lead.email,
+        naam: lead.naam,
+        testUrl,
+      });
+      if (!emailRes.ok) {
+        setFeedback(`Link gekopieerd, maar e-mail mislukt: ${emailRes.error}`);
+        setTimeout(() => setFeedback(null), 6000);
+      }
+    }
+
     const { error: updateError } = await updateLead(lead.id, { status: 'test_verzonden' });
     if (updateError) {
       setFeedback(`Testlink gekopieerd, maar status kon niet worden bijgewerkt: ${updateError}`);

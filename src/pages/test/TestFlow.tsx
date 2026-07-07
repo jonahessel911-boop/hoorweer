@@ -10,6 +10,7 @@ import {
 } from '../../lib/db';
 import { playTone } from '../../lib/audio';
 import { TEST_STEPS, TOTAL_STEPS, stepProgressLabel } from '../../lib/testSteps';
+import { sendTestCompleteEmail } from '../../lib/emailApi';
 import type { Lead, Antwoord } from '../../lib/types';
 
 type Phase = 'welcome' | 'testing' | 'complete';
@@ -147,6 +148,9 @@ export function TestFlow() {
         if (statusError) {
           setLoadError('Test voltooid maar status kon niet worden bijgewerkt.');
           return;
+        }
+        if (lead.email) {
+          await sendTestCompleteEmail({ to: lead.email, naam: lead.naam });
         }
         setLead({ ...lead, status: 'test_afgerond' });
         setPhase('complete');

@@ -12,7 +12,8 @@ import {
   sortCallQueue,
   type CallScreenOutcome,
 } from '../../../lib/callQueue';
-import { formatDate, normalizePhoneForTel } from '../../../lib/format';
+import { formatDate, normalizePhoneForTel, testUrlForLead } from '../../../lib/format';
+import { sendTestLinkEmail } from '../../../lib/emailApi';
 import { MAX_CONTACT_ATTEMPTS, normalizeLead } from '../../../lib/leadStatus';
 import { CopyField } from '../../../components/CopyField';
 import { BellenHearingCard } from '../../../components/BellenHearingCard';
@@ -106,6 +107,19 @@ export function BellenTab() {
       setError(updateRes.error);
       setSaving(false);
       return;
+    }
+
+    if (selectedOutcome === 'testlink_verstuurd' && currentLead.email) {
+      const emailRes = await sendTestLinkEmail({
+        to: currentLead.email,
+        naam: currentLead.naam,
+        testUrl: testUrlForLead(currentLead),
+      });
+      if (!emailRes.ok) {
+        setError(`Opgeslagen, maar testlink-e-mail mislukt: ${emailRes.error}`);
+        setSaving(false);
+        return;
+      }
     }
 
     await Promise.all([refetchLeads(), refetchLogs()]);
