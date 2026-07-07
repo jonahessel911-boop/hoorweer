@@ -2,7 +2,7 @@ import type { Connect } from 'vite';
 import type { ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { loadEnv } from 'vite';
-import { emailErrorStatus, handleEmailRequest, type EmailRoute } from './emailRoutes.ts';
+import { emailErrorStatus, handleEmailRequest, type EmailRoute } from './emailRoutes.js';
 
 async function readBody(req: Connect.IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];

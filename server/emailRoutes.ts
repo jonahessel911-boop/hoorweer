@@ -1,10 +1,10 @@
-import { sendPostmarkEmail } from './postmark.ts';
+import { sendPostmarkEmail } from './postmark.js';
 import {
   buildOfferEmail,
   buildPaymentLinkEmail,
   buildTestCompleteEmail,
   buildTestLinkEmail,
-} from './email/templates.ts';
+} from './email/templates.js';
 
 export type EmailRoute =
   | '/api/email/test-link'

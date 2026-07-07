@@ -1,4 +1,4 @@
-import { EMAIL_BRAND } from './brand.ts';
+import { EMAIL_BRAND } from './brand.js';
 
 const { colors } = EMAIL_BRAND;
 

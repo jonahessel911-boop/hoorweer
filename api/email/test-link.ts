@@ -1,3 +1,3 @@
-import { createEmailHandler } from './_handler.ts';
+import { createEmailHandler } from './_handler.js';
 
 export default createEmailHandler('test-link');

@@ -3,7 +3,7 @@ import {
   emailErrorStatus,
   handleEmailRequest,
   type EmailRoute,
-} from '../../server/emailRoutes.ts';
+} from '../../server/emailRoutes.js';
 
 const ROUTES: Record<string, EmailRoute> = {
   'test-link': '/api/email/test-link',

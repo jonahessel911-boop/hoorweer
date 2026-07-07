@@ -1,4 +1,4 @@
-import { EMAIL_BRAND } from './email/brand.ts';
+import { EMAIL_BRAND } from './email/brand.js';
 
 export interface SendEmailParams {
   to: string;

@@ -1,4 +1,4 @@
-import { renderEmailHtml, renderPlainEmail } from './layout.ts';
+import { renderEmailHtml, renderPlainEmail } from './layout.js';
 
 export interface TestLinkEmailData {
   naam: string;
