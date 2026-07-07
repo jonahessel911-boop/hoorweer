@@ -235,6 +235,8 @@ export async function createLead(data: {
         telefoon: data.telefoon,
         email: data.email,
         test_token,
+        status: 'nieuw',
+        contact_pogingen: 0,
       })
       .select()
       .single();

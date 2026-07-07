@@ -31,6 +31,7 @@ ALTER TABLE leads ADD CONSTRAINT leads_status_check CHECK (status IN (
   'nieuw', 'contact_poging', 'afgeboekt_geen_contact',
   'test_verzonden', 'test_gestart', 'test_afgerond'
 ));
+ALTER TABLE leads ALTER COLUMN status SET DEFAULT 'nieuw';
 
 ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_contact_pogingen_check;
 ALTER TABLE leads ADD CONSTRAINT leads_contact_pogingen_check
