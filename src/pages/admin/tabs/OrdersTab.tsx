@@ -14,9 +14,8 @@ export function OrdersTab() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ klant: '', product: '', status: '', levering: '', land: '' });
 
-  const leadMap = new Map(leads.map((l) => [l.id, l]));
-
   const filtered = useMemo(() => {
+    const leadMap = new Map(leads.map((l) => [l.id, l]));
     return orders.filter((order) => {
       const lead = leadMap.get(order.lead_id);
       const klantNaam = lead?.naam || '';
@@ -28,7 +27,7 @@ export function OrdersTab() {
       if (filters.land && !order.land.toLowerCase().includes(filters.land.toLowerCase())) return false;
       return true;
     });
-  }, [orders, leadMap, filters, search]);
+  }, [orders, leads, filters, search]);
 
   const goToOrder = (orderId: string) => navigate(`/admin/orders/${orderId}`);
   const goToLead = (e: MouseEvent, leadId: string) => {
@@ -103,7 +102,7 @@ export function OrdersTab() {
               </thead>
               <tbody>
                 {filtered.map((order) => {
-                  const lead = leadMap.get(order.lead_id);
+                  const lead = leads.find((l) => l.id === order.lead_id);
                   return (
                     <tr key={order.id} className="crm-row-clickable">
                       <td className="crm-link crm-num" onClick={() => goToOrder(order.id)}>

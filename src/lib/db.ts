@@ -5,8 +5,16 @@ import { normalizeOrder, nextOrderNumber } from './orderDefaults';
 import { normalizeLead } from './leadStatus';
 import { normalizeProduct } from './productDefaults';
 import type { Lead, Order, TestResult, CallLog, Product } from './types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 let useLocalMode: boolean | null = null;
+
+const changeSubscribers = new Set<() => void>();
+let sharedRealtimeChannel: RealtimeChannel | null = null;
+
+function notifyChangeSubscribers() {
+  changeSubscribers.forEach((callback) => callback());
+}
 
 function shouldUseLocal(): boolean {
   if (useLocalMode !== null) return useLocalMode;
@@ -95,18 +103,26 @@ export function subscribeToChanges(callback: () => void): () => void {
     return unsubscribeLocal;
   }
 
-  const channel = supabase
-    .channel('db-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, callback)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, callback)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'test_results' }, callback)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'call_logs' }, callback)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, callback)
-    .subscribe();
+  changeSubscribers.add(callback);
+
+  if (!sharedRealtimeChannel) {
+    sharedRealtimeChannel = supabase
+      .channel('db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, notifyChangeSubscribers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, notifyChangeSubscribers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'test_results' }, notifyChangeSubscribers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'call_logs' }, notifyChangeSubscribers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, notifyChangeSubscribers)
+      .subscribe();
+  }
 
   return () => {
     unsubscribeLocal();
-    supabase.removeChannel(channel);
+    changeSubscribers.delete(callback);
+    if (changeSubscribers.size === 0 && sharedRealtimeChannel) {
+      supabase.removeChannel(sharedRealtimeChannel);
+      sharedRealtimeChannel = null;
+    }
   };
 }
 
