@@ -35,25 +35,6 @@ function switchToLocal(): void {
   useLocalMode = true;
 }
 
-async function syncLeadToSupabase(lead: Lead): Promise<string | null> {
-  const { error } = await supabase.from('leads').upsert(
-    {
-      id: lead.id,
-      naam: lead.naam,
-      telefoon: lead.telefoon,
-      email: lead.email,
-      test_token: lead.test_token,
-      status: lead.status,
-      contact_pogingen: lead.contact_pogingen,
-      contact_uitkomst: lead.contact_uitkomst,
-      laatste_belpoging: lead.laatste_belpoging,
-      created_at: lead.created_at,
-    },
-    { onConflict: 'id' }
-  );
-  return error ? error.message : null;
-}
-
 function mergeTestResults(local: TestResult[], remote: TestResult[]): TestResult[] {
   const byStap = new Map<number, TestResult>();
   for (const row of local) byStap.set(row.stap_nummer, row);
@@ -280,13 +261,21 @@ export async function updateLead(
     return { error: null };
   }
 
-  const lead = localDb.getLeadById(id);
-  if (!lead) {
-    return { error: 'Lead niet gevonden' };
+  try {
+    const { error } = await supabase.from('leads').update(updates).eq('id', id);
+    if (error) {
+      if (isFetchError(error)) {
+        return { error: 'Kon geen verbinding maken met Supabase. Probeer opnieuw.' };
+      }
+      return { error: error.message };
+    }
+    return { error: null };
+  } catch (err) {
+    if (isFetchError(err)) {
+      return { error: 'Kon geen verbinding maken met Supabase. Probeer opnieuw.' };
+    }
+    return { error: 'Kon lead niet bijwerken' };
   }
-
-  const syncErr = await syncLeadToSupabase(lead);
-  return syncErr ? { error: syncErr } : { error: null };
 }
 
 // ——— Orders ———
@@ -709,24 +698,8 @@ export async function createTestResult(
     return { error: null };
   }
 
-  const lead = localDb.getLeadById(data.lead_id);
-  if (!lead) {
-    return { error: 'Lead niet gevonden. Vernieuw de pagina en probeer opnieuw.' };
-  }
-
-  const syncErr = await syncLeadToSupabase(lead);
-  if (syncErr) {
-    return { error: `Lead sync mislukt: ${syncErr}` };
-  }
-
   try {
-    await supabase
-      .from('test_results')
-      .delete()
-      .eq('lead_id', data.lead_id)
-      .eq('stap_nummer', data.stap_nummer);
-
-    const { error } = await supabase.from('test_results').insert({
+    const row = {
       id: result.id,
       lead_id: data.lead_id,
       stap_nummer: data.stap_nummer,
@@ -735,13 +708,30 @@ export async function createTestResult(
       oor: data.oor,
       antwoord: data.antwoord,
       created_at: result.created_at,
-    });
+    };
 
-    if (error) {
-      if (isFetchError(error)) {
+    const { error: upsertError } = await supabase
+      .from('test_results')
+      .upsert(row, { onConflict: 'lead_id,stap_nummer' });
+
+    if (!upsertError) {
+      return { error: null };
+    }
+
+    // Fallback when unique index is not migrated yet
+    await supabase
+      .from('test_results')
+      .delete()
+      .eq('lead_id', data.lead_id)
+      .eq('stap_nummer', data.stap_nummer);
+
+    const { error: insertError } = await supabase.from('test_results').insert(row);
+
+    if (insertError) {
+      if (isFetchError(insertError)) {
         return { error: 'Kon geen verbinding maken met Supabase. Probeer opnieuw.' };
       }
-      return { error: error.message };
+      return { error: insertError.message };
     }
     return { error: null };
   } catch (err) {

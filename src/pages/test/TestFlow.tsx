@@ -149,11 +149,11 @@ export function TestFlow() {
           setLoadError('Test voltooid maar status kon niet worden bijgewerkt.');
           return;
         }
-        if (lead.email) {
-          await sendTestCompleteEmail({ to: lead.email, naam: lead.naam });
-        }
         setLead({ ...lead, status: 'test_afgerond' });
         setPhase('complete');
+        if (lead.email) {
+          void sendTestCompleteEmail({ to: lead.email, naam: lead.naam });
+        }
       }
     } catch {
       setLoadError('Kon antwoord niet opslaan. Probeer opnieuw.');

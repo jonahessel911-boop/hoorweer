@@ -128,6 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_call_logs_lead_id ON call_logs(lead_id);
 CREATE INDEX IF NOT EXISTS idx_leads_test_token ON leads(test_token);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_test_results_lead_id ON test_results(lead_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_test_results_lead_step ON test_results(lead_id, stap_nummer);
 CREATE INDEX IF NOT EXISTS idx_orders_offerte_token ON orders(offerte_token);
 CREATE INDEX IF NOT EXISTS idx_orders_lead_id ON orders(lead_id);
 
